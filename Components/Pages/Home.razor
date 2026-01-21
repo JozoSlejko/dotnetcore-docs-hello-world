@@ -1,54 +1,98 @@
-@page "/home"
-
+﻿@page "/"
+@using System.Net.Http.Json
 @inject HttpClient Http
-@implements IAsyncDisposable
 
-<h3>Home</h3>
+<PageTitle>Home</PageTitle>
 
-@if (isLoading)
+<h1>Hello to AVD!</h1>
+
+<a href="/.auth/login/aad">Log in with Microsoft Entra</a>
+<a href="/.auth/login/slejcooidc">Log in with Slejco OIDC</a>
+
+@if (_hasEmail)
 {
-    <p>Loading...</p>
-}
-else if (!string.IsNullOrEmpty(emailAddress))
-{
-    <p>Email: @emailAddress</p>
-    <a href="https://windows.cloud">Windows Cloud</a>
-}
-else
-{
-    <p>Please log in.</p>
+    <p style="margin-top: 1rem;">
+        <a href="@WindowsCloudUrl" target="_blank" rel="noopener noreferrer">
+            Open AVD
+        </a>
+    </p>
 }
 
 @code {
-    private string emailAddress;
-    private bool isLoading = true;
+    private const string EmailAddressClaimType =
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
+
+    private const string WindowsCloudBaseUrl =
+        "https://windows.cloud.microsoft/webclient/avd/d8817eb0-d704-4641-a3dd-70025b07ae56/df0c4b56-b1ff-43f0-8fd4-08de563faf68";
+
+    private bool _hasEmail;
+    private string WindowsCloudUrl { get; set; } = WindowsCloudBaseUrl;
 
     protected override async Task OnInitializedAsync()
     {
-        emailAddress = await GetEmailAddressAsync();
-        isLoading = false;
+        await RefreshFromAuthMeWithRetryAsync();
     }
 
-    private async Task<string> GetEmailAddressAsync()
+    private async Task RefreshFromAuthMeWithRetryAsync()
     {
-        int attempts = 0;
-        while (attempts < 12)
+        // Retry a few seconds to handle post-login redirect/cookie timing.
+        const int maxAttempts = 12;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            try
+            if (await TryRefreshFromAuthMeAsync())
             {
-                var response = await Http.GetAsync("/.auth/me");
-                response.EnsureSuccessStatusCode();
-                var content = await response.Content.ReadAsStringAsync();
-                var json = JsonSerializer.Deserialize<JsonElement>(content);
-                return json.GetProperty("emailaddress").GetString();
+                break;
             }
-            catch
-            {
-                // Log or handle the exception as needed
-            }
-            attempts++;
+
             await Task.Delay(250);
         }
-        return null;
+    }
+
+    private async Task<bool> TryRefreshFromAuthMeAsync()
+    {
+        try
+        {
+            var auth = await Http.GetFromJsonAsync<AuthMeResponse[]>("/.auth/me");
+
+            var claims = auth?.FirstOrDefault()?.user_claims;
+
+            var email = claims?
+                .FirstOrDefault(c => c.typ == EmailAddressClaimType)
+                ?.val;
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                _hasEmail = false;
+                WindowsCloudUrl = WindowsCloudBaseUrl;
+                return false;
+            }
+
+            _hasEmail = true;
+            WindowsCloudUrl = $"{WindowsCloudBaseUrl}#loginHint={Uri.EscapeDataString(email)}";
+            return true;
+        }
+        catch
+        {
+            _hasEmail = false;
+            WindowsCloudUrl = WindowsCloudBaseUrl;
+            return false;
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // DTOs matching /.auth/me shape (only fields we need)
+    private sealed class AuthMeResponse
+    {
+        public ClaimItem[]? user_claims { get; set; }
+    }
+
+    private sealed class ClaimItem
+    {
+        public string? typ { get; set; }
+        public string? val { get; set; }
     }
 }
