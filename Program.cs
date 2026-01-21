@@ -32,16 +32,10 @@ app.MapRazorComponents<App>()
 
 app.MapGet("/logout", () =>
 {
-    // 1) clear Easy Auth cookie, then come back to /logged-out
-    return Results.Redirect("/.auth/logout?post_logout_redirect_uri=/logged-out");
-});
-
-app.MapGet("/logged-out", () =>
-{
-    // 2) clear Auth0 SSO session, then return to the app home page
+    // Step 1: log out of Auth0, then return to /easy-auth-logout
     var auth0Domain = "https://slejco.eu.auth0.com";
     var clientId = "qAfeGEKBODAI2yi6O6DoIPCaF2qZ6p4F";
-    var returnTo = "https://javdapp1.azurewebsites.net/";
+    var returnTo = "https://javdapp1.azurewebsites.net/easy-auth-logout";
 
     var url =
         $"{auth0Domain}/v2/logout" +
@@ -49,6 +43,12 @@ app.MapGet("/logged-out", () =>
         $"&returnTo={Uri.EscapeDataString(returnTo)}";
 
     return Results.Redirect(url);
+});
+
+app.MapGet("/easy-auth-logout", () =>
+{
+    // Step 2: clear Easy Auth cookie. No redirect params (since they don't work for you).
+    return Results.Redirect("/.auth/logout");
 });
 
 app.Run();
