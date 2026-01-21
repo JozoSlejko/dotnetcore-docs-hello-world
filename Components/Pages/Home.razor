@@ -1,24 +1,54 @@
+@page "/home"
+
+@inject HttpClient Http
+@implements IAsyncDisposable
+
+<h3>Home</h3>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (!string.IsNullOrEmpty(emailAddress))
+{
+    <p>Email: @emailAddress</p>
+    <a href="https://windows.cloud">Windows Cloud</a>
+}
+else
+{
+    <p>Please log in.</p>
+}
+
 @code {
-    private const int maxAttempts = 12;
-    private const int delayMs = 250;
     private string emailAddress;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await RetryAuthMeAsync();
+        emailAddress = await GetEmailAddressAsync();
+        isLoading = false;
     }
 
-    private async Task RetryAuthMeAsync()
+    private async Task<string> GetEmailAddressAsync()
     {
-        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        int attempts = 0;
+        while (attempts < 12)
         {
-            var response = await Http.GetAsync("/.auth/me");
-            if (response.IsSuccessStatusCode)
+            try
             {
-                emailAddress = await response.Content.ReadAsStringAsync();
-                break;
+                var response = await Http.GetAsync("/.auth/me");
+                response.EnsureSuccessStatusCode();
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JsonSerializer.Deserialize<JsonElement>(content);
+                return json.GetProperty("emailaddress").GetString();
             }
-            await Task.Delay(delayMs);
+            catch
+            {
+                // Log or handle the exception as needed
+            }
+            attempts++;
+            await Task.Delay(250);
         }
+        return null;
     }
 }
