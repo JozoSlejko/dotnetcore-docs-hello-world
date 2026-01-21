@@ -1,69 +1,24 @@
-﻿@page "/"
-@using System.Net.Http.Json
-@inject HttpClient Http
-
-<PageTitle>Home</PageTitle>
-
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
-
-<a href="/.auth/login/aad">Log in with Microsoft Entra</a>
-<a href="/.auth/login/slejcooidc">Log in with Slejco OIDC</a>
-
-@if (_hasEmail)
-{
-    <p style="margin-top: 1rem;">
-        <a href="@WindowsCloudUrl" target="_blank" rel="noopener noreferrer">
-            Open Windows Cloud
-        </a>
-    </p>
-}
-
 @code {
-    private const string WindowsCloudBaseUrl =
-        "https://windows.cloud.microsoft/webclient/avd/d8817eb0-d704-4641-a3dd-70025b07ae56/df0c4b56-b1ff-43f0-8fd4-08de563faf68";
-
-    private bool _hasEmail;
-    private string WindowsCloudUrl { get; set; } = WindowsCloudBaseUrl;
+    private const int maxAttempts = 12;
+    private const int delayMs = 250;
+    private string emailAddress;
 
     protected override async Task OnInitializedAsync()
     {
-        await RefreshFromAuthMeAsync();
+        await RetryAuthMeAsync();
     }
 
-    private async Task RefreshFromAuthMeAsync()
+    private async Task RetryAuthMeAsync()
     {
-        try
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var auth = await Http.GetFromJsonAsync<AuthMeResponse[]>("/.auth/me");
-
-            var claims = auth?.FirstOrDefault()?.user_claims;
-            var email = claims?
-                .FirstOrDefault(c => c.typ == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
-                ?.val;
-
-            _hasEmail = !string.IsNullOrWhiteSpace(email);
-
-            WindowsCloudUrl = _hasEmail
-                ? $"{WindowsCloudBaseUrl}#loginHint={Uri.EscapeDataString(email!)}"
-                : WindowsCloudBaseUrl;
+            var response = await Http.GetAsync("/.auth/me");
+            if (response.IsSuccessStatusCode)
+            {
+                emailAddress = await response.Content.ReadAsStringAsync();
+                break;
+            }
+            await Task.Delay(delayMs);
         }
-        catch
-        {
-            _hasEmail = false;
-            WindowsCloudUrl = WindowsCloudBaseUrl;
-        }
-    }
-
-    private sealed class AuthMeResponse
-    {
-        public ClaimItem[]? user_claims { get; set; }
-    }
-
-    private sealed class ClaimItem
-    {
-        public string? typ { get; set; }
-        public string? val { get; set; }
     }
 }
