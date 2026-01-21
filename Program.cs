@@ -6,6 +6,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Needed to read the current user's Cookie header in Blazor Server
+builder.Services.AddHttpContextAccessor();
+
+// Needed for IHttpClientFactory
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
