@@ -1,6 +1,8 @@
 ﻿@page "/"
+@using System.Net.Http.Headers
 @using System.Net.Http.Json
-@inject HttpClient Http
+@inject IHttpClientFactory HttpClientFactory
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Home</PageTitle>
 
@@ -35,15 +37,12 @@
 
     private async Task RefreshFromAuthMeWithRetryAsync()
     {
-        // Retry a few seconds to handle post-login redirect/cookie timing.
         const int maxAttempts = 12;
 
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             if (await TryRefreshFromAuthMeAsync())
-            {
                 break;
-            }
 
             await Task.Delay(250);
         }
@@ -53,7 +52,33 @@
     {
         try
         {
-            var auth = await Http.GetFromJsonAsync<AuthMeResponse[]>("/.auth/me");
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/.auth/me");
+
+            // Forward the browser's cookies to the server-side call
+            var cookieHeader = HttpContextAccessor.HttpContext?.Request.Headers.Cookie.ToString();
+            if (!string.IsNullOrWhiteSpace(cookieHeader))
+            {
+                request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+            }
+
+            var http = HttpClientFactory.CreateClient();
+
+            // Ensure absolute URL (server-side HttpClient can't use relative URLs reliably)
+            var req = HttpContextAccessor.HttpContext?.Request;
+            if (req is not null)
+            {
+                http.BaseAddress = new Uri($"{req.Scheme}://{req.Host}");
+            }
+
+            var response = await http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                _hasEmail = false;
+                WindowsCloudUrl = WindowsCloudBaseUrl;
+                return false;
+            }
+
+            var auth = await response.Content.ReadFromJsonAsync<AuthMeResponse[]>();
 
             var claims = auth?.FirstOrDefault()?.user_claims;
 
@@ -84,7 +109,6 @@
         }
     }
 
-    // DTOs matching /.auth/me shape (only fields we need)
     private sealed class AuthMeResponse
     {
         public ClaimItem[]? user_claims { get; set; }
