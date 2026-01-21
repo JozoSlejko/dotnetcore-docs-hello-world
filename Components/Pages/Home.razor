@@ -1,8 +1,6 @@
 ﻿@page "/"
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Components.Authorization
-@implements IDisposable
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Net.Http.Json
+@inject HttpClient Http
 
 <PageTitle>Home</PageTitle>
 
@@ -13,7 +11,7 @@ Welcome to your new app.
 <a href="/.auth/login/aad">Log in with Microsoft Entra</a>
 <a href="/.auth/login/slejcooidc">Log in with Slejco OIDC</a>
 
-@if (_hasEmailAddressClaim)
+@if (_hasEmail)
 {
     <p style="margin-top: 1rem;">
         <a href="@WindowsCloudUrl" target="_blank" rel="noopener noreferrer">
@@ -23,43 +21,49 @@ Welcome to your new app.
 }
 
 @code {
-    private const string EmailAddressClaimType =
-        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
-
     private const string WindowsCloudBaseUrl =
         "https://windows.cloud.microsoft/webclient/avd/d8817eb0-d704-4641-a3dd-70025b07ae56/df0c4b56-b1ff-43f0-8fd4-08de563faf68";
 
+    private bool _hasEmail;
     private string WindowsCloudUrl { get; set; } = WindowsCloudBaseUrl;
-    private bool _hasEmailAddressClaim;
 
     protected override async Task OnInitializedAsync()
     {
-        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
-        await RefreshAsync();
+        await RefreshFromAuthMeAsync();
     }
 
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> _)
+    private async Task RefreshFromAuthMeAsync()
     {
-        await RefreshAsync();
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var auth = await Http.GetFromJsonAsync<AuthMeResponse[]>("/.auth/me");
+
+            var claims = auth?.FirstOrDefault()?.user_claims;
+            var email = claims?
+                .FirstOrDefault(c => c.typ == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
+                ?.val;
+
+            _hasEmail = !string.IsNullOrWhiteSpace(email);
+
+            WindowsCloudUrl = _hasEmail
+                ? $"{WindowsCloudBaseUrl}#loginHint={Uri.EscapeDataString(email!)}"
+                : WindowsCloudBaseUrl;
+        }
+        catch
+        {
+            _hasEmail = false;
+            WindowsCloudUrl = WindowsCloudBaseUrl;
+        }
     }
 
-    private async Task RefreshAsync()
+    private sealed class AuthMeResponse
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        var email = user?.FindFirst(EmailAddressClaimType)?.Value;
-
-        _hasEmailAddressClaim = !string.IsNullOrWhiteSpace(email);
-
-        WindowsCloudUrl = _hasEmailAddressClaim
-            ? $"{WindowsCloudBaseUrl}#loginHint={Uri.EscapeDataString(email!)}"
-            : WindowsCloudBaseUrl;
+        public ClaimItem[]? user_claims { get; set; }
     }
 
-    public void Dispose()
+    private sealed class ClaimItem
     {
-        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        public string? typ { get; set; }
+        public string? val { get; set; }
     }
 }
