@@ -8,14 +8,25 @@
 
 <h1>Hello to AVD!</h1>
 
-<a href="/.auth/login/aad">Log in with Microsoft Entra</a>
-<a href="/.auth/login/slejcooidc">Log in with Slejco OIDC</a>
+<p style="margin-top: 1rem;">
+    <a href="/.auth/login/aad">Log in with Microsoft</a>
+</p>
+
+<p style="margin-top: 0.75rem;">
+    <a href="/.auth/login/slejcooidc">Log in with Slejco OIDC</a>
+</p>
 
 @if (_hasEmail)
 {
     <p style="margin-top: 1rem;">
         <a href="@WindowsCloudUrl" target="_blank" rel="noopener noreferrer">
             Open AVD
+        </a>
+    </p>
+
+    <p style="margin-top: 2rem;">
+        <a href="/.auth/logout?post_logout_redirect_uri=/">
+            Logout
         </a>
     </p>
 }
