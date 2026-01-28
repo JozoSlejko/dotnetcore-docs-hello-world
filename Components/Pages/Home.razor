@@ -112,9 +112,9 @@
 
             _hasEmail = true;
 
-            // Add domain_hint as a query parameter and keep loginHint in the fragment
+            // Add domain_hint as a query parameter and keep loginHint in the fragment #loginHint={Uri.EscapeDataString(email)}
             WindowsCloudUrl =
-                $"{WindowsCloudBaseUrl}&domain_hint={Uri.EscapeDataString(domain)}#loginHint={Uri.EscapeDataString(email)}";
+                $"{WindowsCloudBaseUrl}&domain_hint={Uri.EscapeDataString(domain)}";
 
             return true;
         }
