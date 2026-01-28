@@ -104,8 +104,18 @@
                 return false;
             }
 
+            // Extract domain from email for domain_hint (part after '@')
+            var atIndex = email.IndexOf('@');
+            var domain = atIndex >= 0 && atIndex < email.Length - 1
+                ? email[(atIndex + 1)..]
+                : string.Empty;
+
             _hasEmail = true;
-            WindowsCloudUrl = $"{WindowsCloudBaseUrl}#loginHint={Uri.EscapeDataString(email)}";
+
+            // Add domain_hint as a query parameter and keep loginHint in the fragment
+            WindowsCloudUrl =
+                $"{WindowsCloudBaseUrl}&domain_hint={Uri.EscapeDataString(domain)}#loginHint={Uri.EscapeDataString(email)}";
+
             return true;
         }
         catch
