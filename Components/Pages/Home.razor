@@ -8,13 +8,16 @@
 
 <h1>Welcome to AVD!</h1>
 
-<p style="margin-top: 1rem;">
-    <a href="/.auth/login/aad">Login with Microsoft Entra (WIP)</a>
-</p>
-
-<p style="margin-top: 0.75rem;">
-    <a href="/.auth/login/slejcooidc">Login with Visma OIDC auth</a>
-</p>
+@if (!_hasEmail)
+{
+    <p style="margin-top: 1rem;">
+        <a href="/.auth/login/aad">Login with Microsoft Entra (WIP)</a>
+    </p>
+    
+    <p style="margin-top: 0.75rem;">
+        <a href="/.auth/login/slejcooidc">Login with Visma OIDC auth</a>
+    </p>
+}
 
 @if (_hasEmail)
 {
