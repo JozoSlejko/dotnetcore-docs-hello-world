@@ -13,14 +13,20 @@
 </p>
 
 <p style="margin-top: 0.75rem;">
-    <a href="/.auth/login/slejcooidc">Login with custom OIDC</a>
+    <a href="/.auth/login/slejcooidc">Login with Visma OIDC auth</a>
 </p>
 
 @if (_hasEmail)
 {
     <p style="margin-top: 1rem;">
         <a href="@WindowsCloudUrl" target="_blank" rel="noopener noreferrer">
-            Open AVD Application
+            Open AVD Application - GA SAML
+        </a>
+    </p>
+
+    <p style="margin-top: 1rem;">
+        <a href="@WindowsCloudUrlDomainless" target="_blank" rel="noopener noreferrer">
+            Open AVD Application - Domainless SAML
         </a>
     </p>
 
@@ -38,8 +44,12 @@
     private const string WindowsCloudBaseUrl =
         "https://windows.cloud.microsoft/webclient/avd/d8817eb0-d704-4641-a3dd-70025b07ae56/6d754f78-afdd-4add-2e7a-08de563eb0a1?tenant=2244edc1-992d-4046-ac5a-c1a5250f6a42";
 
+    private const string WindowsCloudBaseUrlDomainless =
+        "https://windows.cloud.microsoft/webclient/avd/bfc44e4e-3c86-4273-8e8a-291297725124/b457dd0d-59e7-44c6-626d-08de3f8215ae?tenant=173965bb-3291-4484-a7ab-d527e390e509";
+
     private bool _hasEmail;
     private string WindowsCloudUrl { get; set; } = WindowsCloudBaseUrl;
+    private string WindowsCloudUrlDomainless { get; set; } = WindowsCloudBaseUrlDomainless;
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,6 +111,7 @@
             {
                 _hasEmail = false;
                 WindowsCloudUrl = WindowsCloudBaseUrl;
+                WindowsCloudUrlDomainless = WindowsCloudBaseUrlDomainless;
                 return false;
             }
 
@@ -115,6 +126,8 @@
             // Add domain_hint as a query parameter and keep loginHint in the fragment - &domain_hint={Uri.EscapeDataString(domain)}
             WindowsCloudUrl =
                 $"{WindowsCloudBaseUrl}#loginHint={Uri.EscapeDataString(email)}";
+            WindowsCloudUrlDomainless =
+                $"{WindowsCloudBaseUrlDomainless}&domain_hint=connect.visma.com#loginHint={Uri.EscapeDataString(email)}";
 
             return true;
         }
@@ -122,6 +135,7 @@
         {
             _hasEmail = false;
             WindowsCloudUrl = WindowsCloudBaseUrl;
+            WindowsCloudUrlDomainless = WindowsCloudBaseUrlDomainless;
             return false;
         }
         finally
