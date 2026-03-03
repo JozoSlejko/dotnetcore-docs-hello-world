@@ -9,11 +9,7 @@
 <h1>Welcome to AVD!</h1>
 
 @if (!_hasEmail)
-{
-    <p style="margin-top: 1rem;">
-        <a href="/.auth/login/aad?post_login_redirect_uri=/">Login with Microsoft Entra</a>
-    </p>
-    
+{    
     <p style="margin-top: 0.75rem;">
         <a href="/.auth/login/slejcooidc">Login with Visma OIDC auth</a>
     </p>
@@ -21,12 +17,6 @@
 
 @if (_hasEmail)
 {
-    <p style="margin-top: 1rem;">
-        <a href="@WindowsCloudUrl" target="_blank" rel="noopener noreferrer">
-            Open AVD Application - GA SAML
-        </a>
-    </p>
-
     <p style="margin-top: 1rem;">
         <a href="@WindowsCloudUrlDomainless" target="_blank" rel="noopener noreferrer">
             Open AVD Application - Domainless SAML
