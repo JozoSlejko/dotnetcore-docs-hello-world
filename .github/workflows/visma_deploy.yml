@@ -60,5 +60,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'javdapp1'
-          slot-name: 'javdapp1-visma'
+          slot-name: 'visma'
           package: .
